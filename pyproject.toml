@@ -1,0 +1,57 @@
+[project]
+name = "Agent_Smith"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "build an agentic framework..."
+readme = "README.md"
+dependencies = [
+  "rich",
+  "openrouter",
+  "python-dotenv",
+  "fastmcp",
+  "pydantic",
+  "fire",
+  "openai",
+  "docker",
+  "pandas",
+  "httpx",
+  "pytest"
+]
+
+[project.scripts]
+sandbox = "sandbox.__main__:main"
+
+[project.optional-dependencies]
+dev = [
+  "autopep8>=2.3.2",
+  "flake8",
+  "mypy",
+]
+
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sandbox*", "mcp*", "agent*", "validators*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "docker: integration tests requiring a running Docker daemon and network",
+  "testbed: tests requiring a SWE-bench /testbed checkout (run inside the task image)",
+]
+
+[tool.mypy]
+mypy_path = "src"
+namespace_packages = true
+explicit_package_bases = true
+ignore_missing_imports = true
+exclude = [
+  "\\.venv/",
+  "moulinette/",
+  "build/",
+  "dist/",
+  ".*\\.egg-info/",
+]

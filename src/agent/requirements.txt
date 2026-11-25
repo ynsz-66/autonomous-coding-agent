@@ -1,0 +1,10 @@
+rich
+openrouter
+python-dotenv
+fastmcp
+pydantic
+fire
+openai
+docker
+pytest
+ruff

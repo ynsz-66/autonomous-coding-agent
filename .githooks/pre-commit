@@ -1,0 +1,8 @@
+#!/bin/sh
+# Runs the fast test suite before each commit (Docker / SWE-bench testbed tests excluded).
+# Skip once with: git commit --no-verify
+echo "pre-commit: running pytest (not docker, not testbed)..."
+uv run pytest -q -m "not docker and not testbed" || {
+    echo "pre-commit: tests failed, commit aborted (use --no-verify to bypass)."
+    exit 1
+}
