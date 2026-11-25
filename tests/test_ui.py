@@ -63,8 +63,8 @@ def test_render_metrics_and_pause_banner() -> None:
 
 
 def test_build_layout_regions() -> None:
-    layout = build_layout("T")
-    for name in ("header", "thinking", "sandbox", "logs", "footer"):
+    layout = build_layout()
+    for name in ("thinking", "sandbox", "logs", "footer"):
         assert layout[name] is not None
 
 
