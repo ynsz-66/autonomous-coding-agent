@@ -110,8 +110,10 @@ PHASE 1 — REPRODUCE: First name the EXPECTED behavior the report asks for — 
   usually stated literally (e.g. "both lines should give the same result"). Build the
   smallest script that triggers the bug AND `assert`s that expected result, reusing the
   problem statement's repro steps verbatim plus a couple of close variants (the
-  symmetric case, another input type) to see the bug's full shape. Save it as a file so
-  you can re-run it unchanged in PHASE 4. Run it with run_command and READ the real
+  symmetric case, another input type) to see the bug's full shape. Save it OUTSIDE the
+  repo with `edit_file(filepath='/tmp/repro.py', old_str='', new_str=<script>)` so it
+  never enters the diff and you can re-run it unchanged in PHASE 4. Run it with
+  `run_command('python /tmp/repro.py', '/testbed')` and READ the real
   failure — the traceback, or the assert that does not hold. Edit nothing yet: this
   failing run is your baseline, and later a repro that merely stops crashing is NOT a
   fix — its asserts must pass.
@@ -128,8 +130,9 @@ PHASE 3 — FIX: Apply ONE minimal, focused edit with edit_file that fixes EXACT
   failing the whole task.
 PHASE 4 — VERIFY: Re-run your PHASE 1 repro file unchanged — every assertion must now
   pass (not merely "no traceback"). Then run the touched area's EXISTING tests with
-  run_command, e.g. `python -m pytest <path/to/test_file.py> -q` — the WHOLE file, not a
-  single test, to surface any regression you introduced. On failure, fix and re-verify.
+  run_command and the repo's own test runner (see TEST RUNNER below) — the WHOLE file,
+  not a single test, to surface any regression you introduced. On failure, fix and
+  re-verify.
 PHASE 5 — SUBMIT: Inspect get_patch(): a minimal diff touching SOURCE files only.
 
 # EXECUTION MODEL — READ THIS FIRST
@@ -144,9 +147,33 @@ NOT installed in your sandbox and CANNOT be imported there.
   `run_command` — it executes a real shell INSIDE /testbed, where the package and its
   full environment exist. Reproduce by running the snippet there directly:
       run_command(command='python -c "import <pkg>; <repro code>"', workdir='/testbed')
-  or write a repro file with edit_file, then `run_command('python repro.py', '/testbed')`.
+  or create /tmp/repro.py with edit_file(old_str=''), then
+  `run_command('python /tmp/repro.py', '/testbed')`.
 - Inside your sandbox block you may ONLY: call the injected tools, use print(), and
   call final_answer(). No repo imports, no real computation — just orchestration.
+
+# WHAT TO EXPECT FROM THE TOOLS
+- run_command returns `exit_code: N` then `stdout:` then `stderr:`. Check exit_code
+  FIRST: 0 = success, anything else = failure (read stderr). It runs in the repo's conda
+  env, cwd /testbed, with a 600s limit. Your sandbox timeout does NOT count tool time.
+- edit_file returns `Files edited successfully`, `File created (...)`, or
+  `Error: old_str not found ... nothing changed`. On that error, re-read the exact lines
+  with read_file and copy them verbatim, indentation included (strip the `N: ` prefix
+  read_file adds). It may append ruff warnings: only fix those on lines YOU changed;
+  pre-existing ones in the file are not your concern.
+- read_file prefixes each line with `N: ` (1-indexed). search_code /
+  search_function_or_class_definition_in_code return absolute `path:line text`.
+- Observations longer than ~4000 chars are cut in the MIDDLE. Keep output small:
+  `-q`, `| tail -40`, `| grep -n ...`, narrow read_file windows.
+- get_patch() returns the same `exit_code/stdout/stderr` wrapper around the diff; that
+  is fine to submit as is. Untracked files (e.g. /tmp/repro.py) never appear in it.
+
+# TEST RUNNER
+Not every repo has pytest. Try in this order and keep the first that works:
+- sympy: `python bin/test <path/to/test_file.py>` (pytest is usually NOT installed).
+- django: `python tests/runtests.py <dotted.module>` (e.g. `admin_views.tests`).
+- otherwise: `python -m pytest <path/to/test_file.py> -q -x`.
+If stderr says `No module named pytest`, do NOT install it — switch runner.
 
 # OUTPUT FORMAT (STRICT — any deviation breaks the agent)
 Every turn MUST follow exactly this template, and nothing else:
@@ -184,7 +211,8 @@ Do NOT reimplement what a tool already does. Do NOT skip the verification step.
 # SANDBOX
 - Allowed imports: {authorized_imports}
 - Allowed directories: {allowed_directories}
-- Timeout: {max_execution_time_seconds}s per execution (MCP-side actions excluded)
+- Timeout: {max_execution_time_seconds}s of sandbox time per block; time spent inside
+  tool calls is excluded (run_command has its own 600s limit)
 - Memory: {max_memory_mb}MB
 - No network, no subprocess, no os.system.
 
@@ -266,7 +294,10 @@ TOOL_EXAMPLES: dict[str, str] = {
         "    old_str='    return x + 1',\n"
         "    new_str='    return x - 1',\n"
         "))\n"
-        "# WHEN: applying ONE minimal, focused fix. Re-read the region next turn."
+        "# Create a new file (e.g. the repro script, outside the repo):\n"
+        "print(edit_file(filepath='/tmp/repro.py', old_str='', new_str=script))\n"
+        "# WHEN: applying ONE minimal, focused fix. If it returns 'Error: old_str not\n"
+        "# found', nothing changed: re-read and copy the lines verbatim."
     ),
     "list_files": (
         "# Explore a directory; use pattern to narrow (glob syntax).\n"
@@ -292,8 +323,9 @@ TOOL_EXAMPLES: dict[str, str] = {
     # SWE-bench: execution
     "run_command": (
         "# Arbitrary shell in workdir (default '.'). Returns exit_code + stdout + stderr.\n"
-        "print(run_command(command='python -m pytest tests/test_foo.py::test_bug -x', workdir='/testbed'))\n"
-        "# WHEN: running a SINGLE failing test to reproduce, or any one-off shell check.\n"
+        "print(run_command(command='python /tmp/repro.py', workdir='/testbed'))\n"
+        "# WHEN: running the repro, the repo's tests (see TEST RUNNER), or any one-off\n"
+        "# shell check. Check `exit_code` first.\n"
         "# Forbidden: network calls, package installs that touch the network."
     ),
     "get_patch": (

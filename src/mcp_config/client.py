@@ -1,6 +1,7 @@
 import asyncio
 import os
 import resource
+import signal
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
@@ -248,7 +249,13 @@ def make_builtins(
         def wrapper(*args: Any, **kwargs: Any) -> str:
             """Invoke the MCP tool and return its concatenated text."""
             kwargs.update(zip(params, args))
-            result = caller(name, kwargs)
+            # pause the sandbox SIGALRM: tool calls have their own timeouts
+            remaining = signal.setitimer(signal.ITIMER_REAL, 0)[0]
+            try:
+                result = caller(name, kwargs)
+            finally:
+                if remaining:
+                    signal.setitimer(signal.ITIMER_REAL, remaining)
             return "\n".join(
                 c.text for c in result.content if hasattr(c, "text")
             )

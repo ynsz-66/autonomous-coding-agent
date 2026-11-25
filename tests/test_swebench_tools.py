@@ -157,3 +157,19 @@ def test_run_tests_swebench() -> None:
     print(result)
     assert result
     print("PASSED")
+
+
+def test_edit_file_old_str_missing(fixture_path) -> None:
+    section("edit_file — old_str not found")
+    before = fixture_path.read_text()
+    result = edit_file(str(fixture_path), "no such line", "x")
+    assert result.startswith("Error: old_str not found")
+    assert fixture_path.read_text() == before
+
+
+def test_edit_file_creates_new_file(tmp_path) -> None:
+    section("edit_file — create with old_str=''")
+    target = tmp_path / "sub" / "repro.py"
+    result = edit_file(str(target), "", "print('hi')\n")
+    assert "File created" in result
+    assert target.read_text() == "print('hi')\n"

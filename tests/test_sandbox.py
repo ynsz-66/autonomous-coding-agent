@@ -210,3 +210,22 @@ def test_keyboard_interrupt_not_swallowed() -> None:
         raised = True
     assert raised, "SystemExit was swallowed"
     print("PASSED (SystemExit propagated)")
+
+
+def test_tool_calls_excluded_from_timeout() -> None:
+    import time
+    from types import SimpleNamespace
+    from src.mcp_config.client import make_builtins
+
+    tool = SimpleNamespace(name="slow", input_schema={"properties": {}})
+    text = SimpleNamespace(text="done")
+
+    def caller(name, kwargs):
+        time.sleep(1.5)
+        return SimpleNamespace(content=[text])
+
+    builtins = make_builtins(SimpleNamespace(tools=[tool]), caller)
+    sb = make_sandbox(max_execution_time_seconds=1, extra_builtins=builtins)
+    out = sb.run("print(slow())")
+    assert out["error"] is None, out
+    assert "done" in out["stdout"]

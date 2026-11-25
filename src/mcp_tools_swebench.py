@@ -4,6 +4,7 @@ from fastmcp import FastMCP
 from pathlib import Path
 import ast
 import os
+import sys
 
 mcp = FastMCP("swebench-tools")
 
@@ -62,26 +63,37 @@ def read_file(filepath: str, start_line: int, end_line: int) -> str:
 def edit_file(filepath: str, old_str: str, new_str: str) -> str:
     """Replace the first occurrence of ``old_str`` by ``new_str``.
 
+    With ``old_str=''`` on a missing file, creates it with ``new_str``.
     Runs ``ruff check`` afterwards on Python files and reports any
     lint regression introduced by the edit.
 
     Args:
-        filepath: Path of the file to modify.
-        old_str: Text to be replaced (must occur at least once).
-        new_str: Replacement text.
+        filepath: Path of the file to modify (or create).
+        old_str: Exact text to replace; '' to create a new file.
+        new_str: Replacement text (or the new file's content).
 
     Returns:
-        A status message describing success or the ruff issues.
+        A status message describing success, the error, or ruff issues.
     """
     try:
         resolved = resolve_testbed_path(filepath)
+        if old_str == "" and not resolved.exists():
+            resolved.parent.mkdir(parents=True, exist_ok=True)
+            resolved.write_text(new_str)
+            return f"File created ({filepath})"
         with open(resolved, 'r') as f:
             content = f.read()
+        if old_str == "" or old_str not in content:
+            return (
+                f"Error: old_str not found in {filepath}, nothing changed. "
+                "Re-read the lines with read_file and copy them verbatim "
+                "(indentation included)."
+            )
         with open(resolved, 'w') as f:
             f.write(content.replace(old_str, new_str, 1))
         if str(resolved).endswith(".py"):
             proc = subprocess.run(
-                ["python", "-m", "ruff", "check", str(resolved)],
+                [sys.executable, "-m", "ruff", "check", str(resolved)],
                 capture_output=True, text=True, timeout=30,
             )
             if proc.returncode != 0:
