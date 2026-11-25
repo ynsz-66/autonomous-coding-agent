@@ -1,5 +1,25 @@
+<div align="center">
+
+# Coding-Agent
+
+**A code-acting LLM agent that thinks, writes Python, observes, and iterates until the task is solved.**
+
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![uv](https://img.shields.io/badge/uv-package%20manager-DE5FE9?logo=uv&logoColor=white)](https://github.com/astral-sh/uv)
+[![Docker](https://img.shields.io/badge/docker-required-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![MCP](https://img.shields.io/badge/MCP-FastMCP-000000)](https://gofastmcp.com)
+[![MBPP](https://img.shields.io/badge/benchmark-MBPP-success)](https://github.com/google-research/google-research/tree/master/mbpp)
+[![SWE-bench](https://img.shields.io/badge/benchmark-SWE--bench-orange)](https://github.com/swe-bench/swe-bench)
+
+</div>
+
 # Description
-Agentic framework that solves coding tasks by running a structured Thought -> Code -> Observation loop. It generates Python tool calls, executes them in a sandbox, observes results, and iterates until it produces a final solution. The project targets two benchmarks: MBPP (algorithmic Python tasks) and SWE-bench (real-world repository fixes).
+Agentic framework that solves coding tasks by running a structured **Thought → Code → Observation** loop. It generates Python tool calls, executes them in a sandbox, observes results, and iterates until it produces a final solution. The project targets two benchmarks:
+
+| Benchmark | Task type | Tools |
+|-----------|-----------|-------|
+| **MBPP** | Algorithmic Python tasks | `run_tests` (local MCP server) |
+| **SWE-bench** | Real-world repository fixes | file/search/test tools inside the task's Docker container |
 
 # Instructions
 ## Prerequisites
