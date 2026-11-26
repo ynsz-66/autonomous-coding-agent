@@ -313,9 +313,11 @@ def get_patch() -> str:
         The unified diff produced by
         ``git -c core.fileMode=false diff``.
     """
-    return str(run_command(
-        "git -c core.fileMode=false diff", workdir="/testbed"
-    ))
+    proc = subprocess.run(
+        ["git", "-c", "core.fileMode=false", "diff"],
+        cwd="/testbed", capture_output=True, text=True,
+    )
+    return proc.stdout if proc.returncode == 0 else f"Error: {proc.stderr}"
 
 
 if __name__ == "__main__":
