@@ -155,9 +155,6 @@ def run(task_file: str,
             hints_text=task.hints_text,
             tool_schemas=schemas,
             authorized_imports=sandbox.authorized_imports,
-            allowed_directories=sandbox.allowed_directories,
-            max_execution_time_seconds=sandbox.max_execution_time_seconds,
-            max_memory_mb=sandbox.max_memory_mb,
             max_iterations=max_iterations
         )
 
@@ -167,9 +164,7 @@ def run(task_file: str,
         provider_failures: int = 0
         history: list[dict[str, Any]] = [{"role": "user", "content": "Begin."}]
         retries: int = 0
-        layout = build_layout(
-            f"AGENT SMITH · SWE-BENCH · {task.instance_id}"
-            + (" · pause on" if pause else ""))
+        layout = build_layout()
         started = time.time()
 
         def refresh_panels(waiting: bool = False) -> None:

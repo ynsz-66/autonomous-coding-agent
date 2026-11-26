@@ -73,28 +73,21 @@ class LogPanelHandler(logging.Handler):
                      title="LOGS", border_style="grey50")
 
 
-def build_layout(title: str) -> Layout:
-    """Build the full-screen layout: header / thinking | sandbox+logs / footer.
-
-    Args:
-        title: Text shown in the header bar.
+def build_layout() -> Layout:
+    """Build the full-screen layout: thinking | sandbox+logs / footer.
 
     Returns:
-        A :class:`Layout` with regions ``header``, ``thinking``,
-        ``sandbox``, ``logs`` and ``footer``.
+        A :class:`Layout` with regions ``thinking``, ``sandbox``,
+        ``logs`` and ``footer``.
     """
     layout = Layout()
     layout.split_column(
-        Layout(name="header", size=1),
         Layout(name="body"),
         Layout(name="footer", size=6),
     )
     layout["body"].split_row(Layout(name="thinking"), Layout(name="right"))
     layout["right"].split_column(
         Layout(name="sandbox", ratio=3), Layout(name="logs", ratio=2))
-    layout["header"].update(
-        Text(f" {title} ", style="bold white on dark_magenta",
-             justify="center"))
     layout["thinking"].update(render_thinking(""))
     layout["sandbox"].update(
         Panel("", title="SANDBOX", border_style="cyan"))

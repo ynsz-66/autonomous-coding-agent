@@ -102,9 +102,6 @@ def run(task_file: str,
             task.test_list,
             schemas,
             sandbox.authorized_imports,
-            sandbox.allowed_directories,
-            sandbox.max_execution_time_seconds,
-            sandbox.max_memory_mb,
             max_iterations,
         )
 
@@ -114,9 +111,7 @@ def run(task_file: str,
         provider_failures: int = 0
         history: list[dict[str, Any]] = [{"role": "user", "content": "Begin."}]
         retries: int = 0
-        layout = build_layout(
-            f"AGENT SMITH · MBPP · task {task.task_id}"
-            + (" · pause on" if pause else ""))
+        layout = build_layout()
         started = time.time()
 
         def refresh_panels(waiting: bool = False) -> None:

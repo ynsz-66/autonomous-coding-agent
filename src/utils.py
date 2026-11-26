@@ -92,14 +92,24 @@ def rotate_on_error(
 def extract_code(text: str) -> str:
     """Extract the first fenced Python code block from a string.
 
+    Accepts ```` ```python ````, ```` ```py ```` or a bare fence (any case),
+    and a block left unclosed because generation stopped on
+    ``<end_code>`` or hit the token cap.
+
     Args:
         text: Raw LLM response.
 
     Returns:
-        The content of the first ```` ```python ... ``` ```` block,
-        or an empty string when no block is found.
+        The content of the first code block, or an empty string when
+        no block is found.
     """
-    match = re.search(r"```(?:python)?\s*\n(.*?)```", text, re.DOTALL)
+    body = r"[ \t]*\n(.*?)(?:```|<end_code>|\Z)"
+    # tagged fence first: a closing ``` of another block looks like a bare one
+    match = (
+        re.search(r"```[ \t]*(?:python3?|py)" + body,
+                  text, re.DOTALL | re.IGNORECASE)
+        or re.search(r"```" + body, text, re.DOTALL)
+    )
     return match.group(1) if match else ""
 
 

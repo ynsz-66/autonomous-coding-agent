@@ -122,7 +122,7 @@ class OpenAICompatibleLLM:
         self,
         system: str,
         messages: list[dict[str, Any]],
-        max_new_tokens: int = 500,
+        max_new_tokens: int = 2048,
         stop: list[str] | None = None,
     ) -> StreamResponse:
         """Start a streamed chat completion.
