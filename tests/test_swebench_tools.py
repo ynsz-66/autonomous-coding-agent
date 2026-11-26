@@ -146,7 +146,8 @@ def test_get_patch() -> None:
     section("get_patch (requires /testbed)")
     result = get_patch()
     print(result)
-    assert result
+    # raw diff (may be empty on a clean testbed), never the run_command wrapper
+    assert not result.startswith(("exit_code:", "Error:"))
     print("PASSED")
 
 
