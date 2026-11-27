@@ -229,3 +229,15 @@ def test_tool_calls_excluded_from_timeout() -> None:
     out = sb.run("print(slow())")
     assert out["error"] is None, out
     assert "done" in out["stdout"]
+
+
+def test_autoprint_bare_expressions() -> None:
+    section("auto-print of top-level bare expressions")
+    sb = make_sandbox()
+    assert sb.run("1 + 1")["stdout"] == "2\n"
+    assert sb.run("print(1)")["stdout"] == "1\n"  # no double print
+    assert sb.run("x = 3")["stdout"] == ""
+    assert sb.run("for i in range(2):\n    i")["stdout"] == ""  # top-level only
+    out = sb.run("'obs'\nfinal_answer('patch')")
+    assert out["final_answer"] == "patch" and out["stdout"] == "obs\n"
+    assert "SyntaxError" in sb.run("print(")["error"]
