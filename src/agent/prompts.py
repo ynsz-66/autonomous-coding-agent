@@ -6,7 +6,9 @@ from typing import Any
 _COMMON_HARD_RULES = """\
 - Each turn: one `Thought:` line, one ```python``` block, then `<end_code>` (generation stops there).
 - Never write `Observation:` and never guess results: wait for the real Observation.
-- Always `print(...)` tool results, otherwise the Observation is empty."""
+- A tool call alone on its own line is printed automatically (no print() needed).
+- Variables do NOT persist between turns.
+- Tools are already defined: call them directly, never write `def` for a tool."""
 
 
 SYSTEM_PROMPT_MBPP = """\
@@ -29,14 +31,12 @@ Thought: <what you do this turn>
 
 # RULES
 {common_hard_rules}
-- Max {max_iterations} turns. Variables do NOT persist between turns.
+- Max {max_iterations} turns.
 - Allowed imports: {authorized_imports}.
 - Write the function ONLY inside `code = \'\'\'...\'\'\'`, test it with run_tests, submit with final_answer(code) once all tests pass.
 
 # TOOLS
-```python
 {tools_manual}
-```
 
 # EXAMPLE
 Thought: Implement add, test it, submit if green.
@@ -47,7 +47,7 @@ def add(a, b):
 \'\'\'
 tests = ['assert add(2, 3) == 5']
 result = run_tests(code=code, test_list=tests)
-print(result)
+result
 if '"success": true' in result:
     final_answer(code)
 ```
@@ -94,9 +94,7 @@ Thought: <what you learned + the single action of this turn>
 - Allowed imports: {authorized_imports}.
 
 # TOOLS
-```python
 {tools_manual}
-```
 
 # SUBMIT
 ```python
@@ -136,51 +134,26 @@ def py_type(meta: dict[str, Any]) -> str:
     return JSON_TO_PY.get(t, t)
 
 
-TOOL_EXAMPLES: dict[str, str] = {
-    "run_tests": "print(run_tests(code=code, test_list=tests))",
-    "read_file": "print(read_file(filepath='src/foo.py', start_line=1, end_line=40))",
-    "edit_file": "print(edit_file(filepath='src/foo.py', old_str='return x + 1', new_str='return x - 1'))",
-    "list_files": "print(list_files(directory='src', pattern='**/*.py'))",
-    "search_code": "print(search_code(pattern='def parse', file_pattern='**/*.py'))",
-    "search_function_or_class_definition_in_code": "print(search_function_or_class_definition_in_code(name='MyClass'))",
-    "find_references": "print(find_references(name='compute', filepath='src/foo.py', line=42))",
-    "run_command": "print(run_command(command='python /tmp/repro.py', workdir='/testbed'))",
-    "get_patch": "print(get_patch())",
-}
-
-
 def build_tools_manual(tool_schemas: list[dict[str, Any]]) -> str:
-    """Render MCP tool schemas as Python-style signatures + docstrings + examples."""
-    blocks = []
+    """Render MCP tool schemas as one plain-text line per tool.
+
+    Plain text (not ``def`` stubs in a code fence) so small models call
+    the tools instead of copying their definitions.
+    """
+    lines = []
     for tool in tool_schemas:
-        name = tool["name"]
-        description = (tool.get("description") or "").strip()
-        params = tool.get("inputSchema", {}).get("properties", {})
-        required = tool.get("inputSchema", {}).get("required", [])
-
+        schema = tool.get("inputSchema", {})
+        required = schema.get("required", [])
         sig_parts = []
-        for param, meta in params.items():
-            ptype = py_type(meta)
-            default = "" if param in required else " = None"
-            sig_parts.append(f"{param}: {ptype}{default}")
-        signature = f"def {name}({', '.join(sig_parts)}) -> str:"
-
-        block = [signature]
-        block.append('    """')
-        if description:
-            for line in description.splitlines():
-                block.append(f"    {line}".rstrip())
-            block.append("")
-        example = TOOL_EXAMPLES.get(name)
-        if example:
-            block.append("    Example:")
-            for line in example.splitlines():
-                block.append(f"    {line}".rstrip() if line else "")
-        block.append('    """')
-        block.append("    ...")
-        blocks.append("\n".join(block))
-
-    return "\n\n".join(blocks)
+        for param, meta in schema.get("properties", {}).items():
+            default = ""
+            if param not in required:
+                default = f" = {meta.get('default')!r}"
+            sig_parts.append(f"{param}: {py_type(meta)}{default}")
+        summary = (tool.get("description") or "").strip().split("\n")[0]
+        lines.append(
+            f"- {tool['name']}({', '.join(sig_parts)}) -> str: {summary}")
+    return "\n".join(lines)
 
 
 def format_mbpp_prompt(

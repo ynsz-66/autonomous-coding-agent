@@ -283,11 +283,9 @@ def run(task_file: str,
                     refresh_panels()
 
                 if "final_answer" in sandbox_output:
-                    solution = (
-                        sandbox_output['stdout']
-                        if sandbox_output['stdout'] != ""
-                        else sandbox_output['final_answer']
-                    )
+                    # The patch is the final_answer value (get_patch());
+                    # stdout may hold auto-printed observations.
+                    solution = str(sandbox_output['final_answer'])
                     with open(output_path, 'w') as f:
                         f.write(SolutionOutput(
                             task_id=str(task.instance_id),
@@ -308,17 +306,8 @@ def run(task_file: str,
                     raise FinishError()
 
                 history.append({"role": "assistant", "content": full_response})
-                if (
-                    sandbox_output.get("stdout", "") == ""
-                    and sandbox_output.get("error", "") == ""
-                ):
-                    observation = (
-                        "Your code produced no stdout. Wrap the values you "
-                        "need to inspect in print() and try again."
-                    )
-                else:
-                    observation = format_observation(sandbox_output)
-                history.append({"role": "user", "content": observation})
+                history.append({"role": "user",
+                                "content": format_observation(sandbox_output)})
                 iteration += 1
 
         if iteration >= max_iterations:

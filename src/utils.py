@@ -135,7 +135,8 @@ def format_observation(
 
     parts = [
         stdout if stdout
-        else "(no stdout — use print() to inspect values)"
+        else "(no output — put the tool call alone on its own line to see "
+             "its result)"
     ]
     if error is not None:
         parts.append(f"Error:\n{error}")

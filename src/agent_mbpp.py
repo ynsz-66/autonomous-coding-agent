@@ -250,14 +250,8 @@ def run(task_file: str,
                     raise FinishError()
 
                 history.append({"role": "assistant", "content": full_response})
-                if sandbox_output.get("stdout", "") == "":
-                    observation = (
-                        "Your code produced no stdout. Wrap the values you "
-                        "need to inspect in print() and try again."
-                    )
-                else:
-                    observation = format_observation(sandbox_output)
-                history.append({"role": "user", "content": observation})
+                history.append({"role": "user",
+                                "content": format_observation(sandbox_output)})
                 iteration += 1
 
         if iteration >= max_iterations:
