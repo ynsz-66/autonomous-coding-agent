@@ -1,3 +1,4 @@
+import ast
 import io
 import signal
 import resource
@@ -352,7 +353,19 @@ class SandboxConfig(BaseModel):
                     sandbox_globals.update(self.extra_builtins)
                     sandbox_globals["final_answer"] = final_answer
 
-                    exec(code, sandbox_globals, None)
+                    # REPL-like: print top-level bare expressions so the
+                    # LLM sees `run_command(...)` without wrapping print().
+                    tree = ast.parse(code, filename="<string>")
+                    for node in tree.body:
+                        if isinstance(node, ast.Expr):
+                            node.value = ast.Call(
+                                ast.Name("__autoprint__", ast.Load()),
+                                [node.value], [])
+                    ast.fix_missing_locations(tree)
+                    sandbox_globals["__autoprint__"] = (
+                        lambda v: None if v is None else print(v))
+                    exec(compile(tree, "<string>", "exec"),
+                         sandbox_globals, None)
                 except TimeoutException:
                     return {
                         "stdout": buf.getvalue(),
